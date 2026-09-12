@@ -40,7 +40,9 @@ Four entities. Resist adding a fifth.
 
 - `person` — id, name, role (guardian | kid), telegram_chat_id
 - `event` — id, title, person_id, start, end, location
-- `assignment` — who is covering which event (pickup, dropoff)
+- `assignment` — who is covering which kid's pickups/dropoffs (keyed on the
+  kid's person_id, not a specific event_id — survives swapping calendar
+  sources, since a real calendar's event IDs won't match seeded ones)
 - `ask` — one open question: text, reason, who was asked, status
 
 Everything on the screen is a render of these. If a feature doesn't feed the

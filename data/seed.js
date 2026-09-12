@@ -21,8 +21,11 @@ const events = [
   { id: 'ev-jonah-home',  title: 'Home',             person_id: 'jonah', start: '15:00', end: '18:00', location: 'Home' }
 ];
 
+// kid_person_id, not a specific event_id — assignments track "who covers
+// this kid's pickups", which survives swapping to a real calendar source
+// where event IDs won't match our seeded ones
 const assignments = [
-  { id: 'asg-maya-pickup', event_id: 'ev-maya-soccer', person_id: 'dana', kind: 'pickup', status: 'assigned' }
+  { id: 'asg-maya', kid_person_id: 'maya', person_id: 'dana', kind: 'pickup', status: 'assigned' }
 ];
 
 // current: { id, event_id, text, reason, asked: [personId], status } or null

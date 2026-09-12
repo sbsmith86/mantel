@@ -24,10 +24,12 @@ function evaluateDay() {
   const guardians = people.filter(p => p.role === 'guardian');
   let openAsk = null;
 
-  // only events with an assignment represent an expected pickup/dropoff —
-  // a kid event with no assignment (e.g. "at home") needs no coverage
+  // only kids with an assignment need coverage — a kid event with no
+  // assignment (e.g. "at home") needs none. Keyed on the kid's person_id,
+  // not a specific event_id, so it survives swapping calendar sources
+  // (real calendar event IDs won't match our seeded ones)
   for (const assignment of assignments) {
-    const kidEvent = events.find(e => e.id === assignment.event_id);
+    const kidEvent = events.find(e => e.person_id === assignment.kid_person_id);
     if (!kidEvent) continue;
     const T = kidEvent.end;
 
@@ -80,9 +82,9 @@ function resolveAsk(personId) {
   const kidEvent = events.find(e => e.id === current.event_id);
   const kid = people.find(p => p.id === kidEvent.person_id);
 
-  let a = assignments.find(x => x.event_id === current.event_id);
+  let a = assignments.find(x => x.kid_person_id === kidEvent.person_id);
   if (!a) {
-    a = { id: 'asg-' + current.event_id, event_id: current.event_id, person_id: personId, kind: 'pickup', status: 'assigned' };
+    a = { id: 'asg-' + kidEvent.person_id, kid_person_id: kidEvent.person_id, person_id: personId, kind: 'pickup', status: 'assigned' };
     assignments.push(a);
   } else {
     a.person_id = personId;
