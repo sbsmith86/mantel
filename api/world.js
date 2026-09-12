@@ -2,7 +2,7 @@
 // Conflict evaluation itself lives in api/conflict.js — this just shapes
 // whatever it produced into what the wall renders.
 
-const { people, events, ask, status } = require('../data/seed');
+const { people, events, assignments, ask, status } = require('../data/seed');
 
 // "15:45" -> "3:45pm"
 function fmt(hhmm) {
@@ -13,10 +13,30 @@ function fmt(hhmm) {
   return `${h}:${mStr}${ampm}`;
 }
 
+// shows who's on the hook for pickup *before* anything breaks — otherwise a
+// conflict looks like it comes from nowhere, since nothing else on the wall
+// says a guardian was ever expected to cover this
 function describeEvent(person, e) {
   if (!e) return person.role === 'kid' ? 'No events today' : 'Free';
-  if (person.role === 'kid') return `${e.title} until ${fmt(e.end)}, ${e.location}`;
+
+  if (person.role === 'kid') {
+    // suppressed during an open conflict — the ask banner already says
+    // coverage is broken, so restating the (now-stale) assignment here
+    // would contradict it
+    let coverNote = '';
+    if (person.flag !== 'true') {
+      const assignment = assignments.find(a => a.kid_person_id === person.id);
+      const covering = assignment && people.find(p => p.id === assignment.person_id);
+      if (covering) coverNote = ` — ${covering.name}'s got pickup`;
+    }
+    return `${e.title} until ${fmt(e.end)}, ${e.location}${coverNote}`;
+  }
+
   return `${e.title} until ${fmt(e.end)}`;
+}
+
+function todayLabel() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function buildAsk() {
@@ -28,11 +48,11 @@ function buildAsk() {
 function buildWorld() {
   const peopleView = people.map(p => {
     const evs = events.filter(e => e.person_id === p.id).sort((a, b) => a.start.localeCompare(b.start));
-    return { id: p.id, name: p.name, state: describeEvent(p, evs[0]), flag: p.flag };
+    return { id: p.id, name: p.name, role: p.role, state: describeEvent(p, evs[0]), flag: p.flag };
   });
 
   return {
-    today: 'Today',
+    today: todayLabel(),
     people: peopleView,
     ask: buildAsk(),
     trace: status.trace,

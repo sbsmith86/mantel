@@ -60,7 +60,7 @@ function PeopleGrid({ people }) {
             {p.name.charAt(0)}
           </div>
           <div>
-            <div className="who-name">{p.name}</div>
+            <div className="who-name">{p.name}<span className="who-role">{p.role}</span></div>
             <div className="who-state">{p.state}</div>
           </div>
         </div>
