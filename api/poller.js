@@ -54,4 +54,11 @@ function startPolling() {
   setInterval(checkForChanges, POLL_MS);
 }
 
-module.exports = { startPolling, checkForChanges };
+// re-syncs the poller's own bookkeeping after data/seed.js's reset() runs —
+// otherwise a stale lastKnownState would look like "no change" next poll
+function resetPolling() {
+  lastKnownState = snapshot();
+  lastNotifiedAskId = null;
+}
+
+module.exports = { startPolling, checkForChanges, resetPolling };

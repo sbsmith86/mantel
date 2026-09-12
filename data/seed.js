@@ -33,4 +33,19 @@ const ask = { current: null, resolved: null };
 // mutable: what the wall's trace line says, and whether it's "live"
 const status = { trace: 'Watching the calendar.', live: false };
 
-module.exports = { people, events, assignments, ask, status };
+// snapshot taken before anything mutates, so a demo run can be reset without
+// restarting the process
+const initialSnapshot = JSON.parse(JSON.stringify({ people, events, assignments }));
+
+function reset() {
+  const snap = JSON.parse(JSON.stringify(initialSnapshot));
+  people.splice(0, people.length, ...snap.people);
+  events.splice(0, events.length, ...snap.events);
+  assignments.splice(0, assignments.length, ...snap.assignments);
+  ask.current = null;
+  ask.resolved = null;
+  status.trace = 'Watching the calendar.';
+  status.live = false;
+}
+
+module.exports = { people, events, assignments, ask, status, reset };

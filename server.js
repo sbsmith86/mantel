@@ -18,10 +18,10 @@ const path = require('path');
 })();
 
 const { buildWorld } = require('./api/world');
-const { startPolling, checkForChanges } = require('./api/poller');
-const { resolveAsk } = require('./api/conflict');
-const { pollUpdates, clearKeyboards, answerCallback } = require('./api/telegram');
-const { events, people } = require('./data/seed');
+const { startPolling, checkForChanges, resetPolling } = require('./api/poller');
+const { evaluateDay, resolveAsk } = require('./api/conflict');
+const { pollUpdates, clearKeyboards, answerCallback, resetMessageRefs } = require('./api/telegram');
+const { events, people, reset } = require('./data/seed');
 
 const PORT = 3000;
 const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
@@ -103,6 +103,18 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(messages, null, 2));
       })
       .catch(err => { res.writeHead(500); res.end('telegram request failed: ' + err.message); });
+    return;
+  }
+
+  // debug-only: restores the seed data to its original state without
+  // restarting the process — lets you rehearse the demo repeatedly
+  if (req.method === 'POST' && url.pathname === '/debug/reset') {
+    reset();
+    resetPolling();
+    resetMessageRefs();
+    evaluateDay();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(buildWorld()));
     return;
   }
 

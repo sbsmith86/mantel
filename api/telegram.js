@@ -56,6 +56,12 @@ async function answerCallback(token, callbackQueryId, text) {
   await callApi(token, 'answerCallbackQuery', { callback_query_id: callbackQueryId, text });
 }
 
+// clears tracked message refs after a demo reset, so a stale tap on a
+// pre-reset message can't clear keyboards on unrelated new messages
+function resetMessageRefs() {
+  openMessageRefs = [];
+}
+
 // long polling: getUpdates blocks server-side up to `timeout` seconds, so
 // this loop is cheap and needs no public URL or webhook
 async function pollUpdates(token, onCallback) {
@@ -84,4 +90,4 @@ async function pollUpdates(token, onCallback) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-module.exports = { notifyAsk, clearKeyboards, answerCallback, pollUpdates };
+module.exports = { notifyAsk, clearKeyboards, answerCallback, pollUpdates, resetMessageRefs };
