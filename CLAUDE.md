@@ -56,16 +56,38 @@ conflict. Rank candidate parents by who is free soonest, ask the top two.
 Do not generalize this into a rules engine. One rule demoed well beats five
 rules that half-work.
 
+## Project layout
+
+```
+mantel/
+├── CLAUDE.md
+├── server.js          # HTTP: GET /world (JSON), serves frontend/dist
+├── api/world.js        # derives /world's JSON from seed data — pure functions
+├── data/seed.js         # in-memory person/event/assignment/ask data
+└── frontend/            # Vite + React wall screen
+    ├── vite.config.js   # dev-server proxy to server.js on :3000
+    └── src/
+        ├── App.jsx       # polls GET /world, renders from that state
+        └── App.css       # the wall's design system
+```
+
+`npm run build` in `frontend/`, then `node server.js` alone serves everything —
+one process, one URL. For live-reload iteration, run `npm run dev` in
+`frontend/` alongside `node server.js`.
+
 ## Interfaces
 
 ### Wall screen
-`wall.html` already exists. It is state-machine driven, not hardcoded screens.
-A `world` object holds people, their status lines, and the current ask.
-`render()` is a pure function of `world`.
+A React app in `frontend/` (Vite, no router, no state library — `useState` /
+`useEffect` + `fetch('/world')` on an interval is the whole data layer). This
+replaced an earlier static `wall.html` prototype; its design ideas carried
+over into `App.css` (dark theme, ask banner, person grid, trace line), but not
+the file or its vanilla-JS build. This was a deliberate exception to "ask
+before adding a dependency" below — decided mid-build once real polling-driven
+state made component-based rendering worth the tooling.
 
-To wire the real backend: delete the `beats` array, have the poller mutate
-`world`, call `render()`. That is the only seam. Do not restructure the markup
-or the CSS.
+The poller in `App.jsx` is the only seam: it fetches `/world` and sets state.
+No hardcoded demo beats, no manual advance controls.
 
 Three ask tones exist: `calm`, `open`, `settled`. Person rows carry a flag that
 tints their status line to match the ask. Keep that coupling.
@@ -93,7 +115,8 @@ building it.
 
 1. Backend holds `world` state, serves it over a JSON endpoint. Fake calendar
    in memory.
-2. Wall polls that endpoint and renders. Prototype now shows real state.
+2. React frontend polls that endpoint and renders. Prototype now shows real
+   state.
 3. Conflict rule. Mutating a fake event's start time produces an ask.
 4. Telegram outbound + callback resolves the ask.
 5. Only then: swap the fake calendar for a real source, if time remains.
