@@ -4,12 +4,13 @@
 
 const { people, events, ask } = require('../data/seed');
 
-function fmt(mins) {
-  let h = Math.floor(mins / 60) % 24;
-  const m = mins % 60;
-  const ampm = h >= 12 ? 'pm' : 'am';
-  h = h % 12; if (h === 0) h = 12;
-  return `${h}:${String(m).padStart(2, '0')}${ampm}`;
+// "15:45" -> "3:45pm"
+function fmt(hhmm) {
+  const [hStr, mStr] = hhmm.split(':');
+  const h24 = parseInt(hStr, 10);
+  const ampm = h24 >= 12 ? 'pm' : 'am';
+  let h = h24 % 12; if (h === 0) h = 12;
+  return `${h}:${mStr}${ampm}`;
 }
 
 function describeEvent(person, e) {
@@ -20,7 +21,7 @@ function describeEvent(person, e) {
 
 function buildWorld() {
   const peopleView = people.map(p => {
-    const evs = events.filter(e => e.person_id === p.id).sort((a, b) => a.start - b.start);
+    const evs = events.filter(e => e.person_id === p.id).sort((a, b) => a.start.localeCompare(b.start));
     return { id: p.id, name: p.name, state: describeEvent(p, evs[0]), flag: null };
   });
 

@@ -8,12 +8,13 @@ const people = [
   { id: 'jonah', name: 'Jonah', role: 'kid',    telegram_chat_id: null }
 ];
 
-// times are minutes since midnight
+// times are 24-hour "HH:MM" strings, zero-padded — sort and compare as plain
+// strings, no parsing needed
 const events = [
-  { id: 'ev-maya-soccer', title: 'Soccer practice', person_id: 'maya',  start: 900, end: 945,  location: 'Kirkwood Field' },
-  { id: 'ev-dana-calls',  title: 'Calls',            person_id: 'dana',  start: 840, end: 990,  location: 'Home office' },
-  { id: 'ev-sam-work',    title: 'Office',           person_id: 'sam',   start: 540, end: 1080, location: 'Office' },
-  { id: 'ev-jonah-home',  title: 'Home',             person_id: 'jonah', start: 900, end: 1080, location: 'Home' }
+  { id: 'ev-maya-soccer', title: 'Soccer practice', person_id: 'maya',  start: '15:00', end: '15:45', location: 'Kirkwood Field' },
+  { id: 'ev-dana-calls',  title: 'Calls',            person_id: 'dana',  start: '14:00', end: '16:30', location: 'Home office' },
+  { id: 'ev-sam-work',    title: 'Office',           person_id: 'sam',   start: '09:00', end: '18:00', location: 'Office' },
+  { id: 'ev-jonah-home',  title: 'Home',             person_id: 'jonah', start: '15:00', end: '18:00', location: 'Home' }
 ];
 
 const assignments = [
