@@ -2,7 +2,7 @@
 // No conflict logic yet (that's issue #3) — status lines just describe
 // each person's first event today.
 
-const { people, events, ask } = require('./seed');
+const { people, events, ask } = require('../data/seed');
 
 function fmt(mins) {
   let h = Math.floor(mins / 60) % 24;

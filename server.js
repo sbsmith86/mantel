@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { buildWorld } = require('./world');
+const { buildWorld } = require('./api/world');
 
 const PORT = 3000;
 
@@ -15,7 +15,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/wall.html')) {
-    const file = path.join(__dirname, '..', 'public', 'wall.html');
+    const file = path.join(__dirname, 'frontend', 'wall.html');
     fs.readFile(file, (err, data) => {
       if (err) { res.writeHead(500); res.end('could not load wall.html'); return; }
       res.writeHead(200, { 'Content-Type': 'text/html' });
