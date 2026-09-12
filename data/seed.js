@@ -2,8 +2,8 @@
 // Four entities only: person, event, assignment, ask.
 
 const people = [
-  { id: 'dana',  name: 'Dana',  role: 'parent', telegram_chat_id: null },
-  { id: 'sam',   name: 'Sam',   role: 'parent', telegram_chat_id: null },
+  { id: 'dana',  name: 'Dana',  role: 'guardian', telegram_chat_id: null },
+  { id: 'sam',   name: 'Sam',   role: 'guardian', telegram_chat_id: null },
   { id: 'maya',  name: 'Maya',  role: 'kid',    telegram_chat_id: null },
   { id: 'jonah', name: 'Jonah', role: 'kid',    telegram_chat_id: null }
 ];

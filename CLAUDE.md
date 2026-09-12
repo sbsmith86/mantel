@@ -38,7 +38,7 @@ means the wall can never drift out of sync with the calendar.
 
 Four entities. Resist adding a fifth.
 
-- `person` — id, name, role (parent | kid), telegram_chat_id
+- `person` — id, name, role (guardian | kid), telegram_chat_id
 - `event` — id, title, person_id, start, end, location
 - `assignment` — who is covering which event (pickup, dropoff)
 - `ask` — one open question: text, reason, who was asked, status
@@ -50,8 +50,12 @@ conflict logic, it doesn't get a field.
 
 Start with exactly one rule, and make it good:
 
-A kid's event ends at time T at location L. No parent is free at T. That's a
-conflict. Rank candidate parents by who is free soonest, ask the top two.
+A kid's event ends at time T at location L. No guardian is free at T. That's a
+conflict. Rank candidate guardians by who is free soonest, ask the top two.
+
+"Guardian" isn't literally "parent" — it's anyone eligible to cover a pickup
+(an older sibling, a grandparent). No new entity or eligibility field needed:
+just seed more `role: 'guardian'` people if you want more than two candidates.
 
 Do not generalize this into a rules engine. One rule demoed well beats five
 rules that half-work.
