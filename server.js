@@ -2,6 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { buildWorld } = require('./api/world');
+const { startPolling, checkForChanges } = require('./api/poller');
+const { events } = require('./data/seed');
 
 const PORT = 3000;
 const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
@@ -41,6 +43,28 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // debug-only: simulates an external calendar edit, since there's no real
+  // calendar source yet (issue #5). Not part of the real interface.
+  if (req.method === 'POST' && url.pathname === '/debug/move-event') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let patch;
+      try { patch = JSON.parse(body || '{}'); } catch { res.writeHead(400); res.end('bad json'); return; }
+
+      const e = events.find(ev => ev.id === patch.id);
+      if (!e) { res.writeHead(404); res.end('unknown event id'); return; }
+      if (patch.start != null) e.start = patch.start;
+      if (patch.end != null) e.end = patch.end;
+      if (patch.location != null) e.location = patch.location;
+
+      checkForChanges(); // re-evaluate now instead of waiting up to 10s
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(buildWorld()));
+    });
+    return;
+  }
+
   if (req.method === 'GET') {
     serveStatic(url.pathname, res);
     return;
@@ -53,3 +77,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`Mantel backend on http://localhost:${PORT}`);
 });
+
+startPolling();

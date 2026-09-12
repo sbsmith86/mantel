@@ -1,8 +1,8 @@
 // Pure functions that derive the wall's `world` JSON from the seed data.
-// No conflict logic yet (that's issue #3) — status lines just describe
-// each person's first event today.
+// Conflict evaluation itself lives in api/conflict.js — this just shapes
+// whatever it produced into what the wall renders.
 
-const { people, events, ask } = require('../data/seed');
+const { people, events, ask, status } = require('../data/seed');
 
 // "15:45" -> "3:45pm"
 function fmt(hhmm) {
@@ -19,18 +19,24 @@ function describeEvent(person, e) {
   return `${e.title} until ${fmt(e.end)}`;
 }
 
+function buildAsk() {
+  const a = ask.current;
+  if (!a) return null;
+  return { tone: 'open', kicker: 'Needs a person', line: a.text, why: a.reason };
+}
+
 function buildWorld() {
   const peopleView = people.map(p => {
     const evs = events.filter(e => e.person_id === p.id).sort((a, b) => a.start.localeCompare(b.start));
-    return { id: p.id, name: p.name, state: describeEvent(p, evs[0]), flag: null };
+    return { id: p.id, name: p.name, state: describeEvent(p, evs[0]), flag: p.flag };
   });
 
   return {
     today: 'Today',
     people: peopleView,
-    ask: ask.current,
-    trace: 'Watching the calendar.',
-    live: false
+    ask: buildAsk(),
+    trace: status.trace,
+    live: status.live
   };
 }
 
