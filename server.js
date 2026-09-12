@@ -134,10 +134,13 @@ server.listen(PORT, () => {
 startPolling();
 
 async function handleCallback(cb) {
-  const person = people.find(p => p.telegram_chat_id === cb.from.id);
+  // the tapped button names exactly who it's for — that's the identity that
+  // matters, not just which Telegram account sent the tap (multiple
+  // guardians can share one account during testing)
+  const [action, , personId] = cb.data.split(':');
+  const person = people.find(p => p.id === personId);
   if (!person) { await answerCallback(TELEGRAM_TOKEN, cb.id, 'Not recognized.'); return; }
-
-  const [action] = cb.data.split(':');
+  if (person.telegram_chat_id !== cb.from.id) { await answerCallback(TELEGRAM_TOKEN, cb.id, 'Not recognized.'); return; }
 
   if (action === 'resolve') {
     const result = resolveAsk(person.id);

@@ -31,8 +31,8 @@ async function notifyAsk(token, ask, people) {
       text: `Hey ${person.name} — ${ask.text}\n\n${ask.reason}`,
       reply_markup: {
         inline_keyboard: [[
-          { text: "I've got it", callback_data: `resolve:${ask.id}` },
-          { text: "Can't", callback_data: `decline:${ask.id}` }
+          { text: "I've got it", callback_data: `resolve:${ask.id}:${personId}` },
+          { text: "Can't", callback_data: `decline:${ask.id}:${personId}` }
         ]]
       }
     });
