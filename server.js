@@ -21,6 +21,7 @@ const { buildWorld } = require('./api/world');
 const { startPolling, checkForChanges, resetPolling } = require('./api/poller');
 const { evaluateDay, resolveAsk } = require('./api/conflict');
 const { pollUpdates, clearKeyboards, answerCallback, resetMessageRefs } = require('./api/telegram');
+const googleCalendar = require('./api/google-calendar');
 const { events, people, reset } = require('./data/seed');
 
 const PORT = 3000;
@@ -67,17 +68,17 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && url.pathname === '/debug/move-event') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
-    req.on('end', () => {
+    req.on('end', async () => {
       let patch;
       try { patch = JSON.parse(body || '{}'); } catch { res.writeHead(400); res.end('bad json'); return; }
 
       const e = events.find(ev => ev.id === patch.id);
-      if (!e) { res.writeHead(404); res.end('unknown event id'); return; }
+      if (!e) { res.writeHead(404); res.end('unknown event id — if Google Calendar is connected, this fake-seed tool no longer applies; edit the real event instead'); return; }
       if (patch.start != null) e.start = patch.start;
       if (patch.end != null) e.end = patch.end;
       if (patch.location != null) e.location = patch.location;
 
-      checkForChanges(); // re-evaluate now instead of waiting up to 10s
+      await checkForChanges(); // re-evaluate now instead of waiting up to 10s
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(buildWorld()));
     });
@@ -103,6 +104,40 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(messages, null, 2));
       })
       .catch(err => { res.writeHead(500); res.end('telegram request failed: ' + err.message); });
+    return;
+  }
+
+  // starts the one-time Google OAuth flow — open this in a browser
+  if (req.method === 'GET' && url.pathname === '/oauth/start') {
+    if (!process.env.GOOGLE_CLIENT_ID) { res.writeHead(500); res.end('GOOGLE_CLIENT_ID not set in .env'); return; }
+    res.writeHead(302, { Location: googleCalendar.buildAuthUrl() });
+    res.end();
+    return;
+  }
+
+  // Google redirects here after you approve access
+  if (req.method === 'GET' && url.pathname === '/oauth/callback') {
+    const code = url.searchParams.get('code');
+    if (!code) { res.writeHead(400); res.end('missing code'); return; }
+    googleCalendar.exchangeCodeForTokens(code)
+      .then(async data => {
+        if (!data.refresh_token) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<p>Connected, but no refresh token came back — this happens on a re-auth. Revoke access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a> and try /oauth/start again.</p>');
+          return;
+        }
+        await checkForChanges(); // pull real events immediately
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end('<p>Google Calendar connected. You can close this tab and go back to the wall.</p>');
+      })
+      .catch(err => { res.writeHead(500); res.end('oauth exchange failed: ' + err.message); });
+    return;
+  }
+
+  // debug-only: is Google Calendar connected right now
+  if (req.method === 'GET' && url.pathname === '/debug/google-status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ connected: googleCalendar.isConnected() }));
     return;
   }
 

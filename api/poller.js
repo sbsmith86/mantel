@@ -1,11 +1,12 @@
 // Polls the calendar every 10s (see CLAUDE.md), diffs against last-known
 // state on start/end/location only, and re-evaluates the day on any delta.
-// Right now "the calendar" is the in-memory fake in data/seed.js — same
-// shape as a real one, so this is the seam issue #5 swaps later.
+// If Google Calendar is connected (issue #5), pulls real events first —
+// same `event` shape either way, so conflict.js/world.js don't change.
 
 const { events, people, ask } = require('../data/seed');
 const { evaluateDay } = require('./conflict');
 const { notifyAsk } = require('./telegram');
+const googleCalendar = require('./google-calendar');
 
 const POLL_MS = 10000;
 
@@ -19,11 +20,22 @@ function snapshot() {
 }
 
 function changed(before, after) {
-  return Object.keys(after).some(id => {
+  const beforeIds = Object.keys(before);
+  const afterIds = Object.keys(after);
+  if (beforeIds.length !== afterIds.length) return true;
+  return afterIds.some(id => {
     const b = before[id];
     const a = after[id];
     return !b || b.start !== a.start || b.end !== a.end || b.location !== a.location;
   });
+}
+
+// if Google Calendar is connected, replace `events`' contents with what's
+// really on the calendar; otherwise leave the fake seed data alone
+async function syncFromGoogleIfConnected() {
+  if (!googleCalendar.isConnected()) return;
+  const fresh = await googleCalendar.fetchTodayEvents(people);
+  if (fresh) events.splice(0, events.length, ...fresh);
 }
 
 function notifyIfNewAsk() {
@@ -39,7 +51,8 @@ function notifyIfNewAsk() {
   }
 }
 
-function checkForChanges() {
+async function checkForChanges() {
+  await syncFromGoogleIfConnected();
   const now = snapshot();
   if (changed(lastKnownState, now)) {
     evaluateDay();
@@ -48,7 +61,8 @@ function checkForChanges() {
   lastKnownState = now;
 }
 
-function startPolling() {
+async function startPolling() {
+  await syncFromGoogleIfConnected();
   lastKnownState = snapshot();
   evaluateDay(); // establish initial ask/status/flags
   setInterval(checkForChanges, POLL_MS);
