@@ -19,6 +19,7 @@ function freeRank(personId, T) {
 
 function evaluateDay() {
   people.forEach(p => { p.flag = null; });
+  ask.resolved = null;
 
   const guardians = people.filter(p => p.role === 'guardian');
   let openAsk = null;
@@ -67,4 +68,37 @@ function evaluateDay() {
   }
 }
 
-module.exports = { evaluateDay, isFreeAt, freeRank };
+// A guardian tapped "I've got it" on the current ask. Assigns them to cover
+// the event, clears the ask, and leaves a brief "settled" message for the
+// wall. Idempotent: a stale/duplicate tap (ask already resolved) is a no-op.
+function resolveAsk(personId) {
+  const current = ask.current;
+  if (!current) return { ok: false, reason: 'no open ask' };
+  if (!current.asked.includes(personId)) return { ok: false, reason: 'not asked' };
+
+  const person = people.find(p => p.id === personId);
+  const kidEvent = events.find(e => e.id === current.event_id);
+  const kid = people.find(p => p.id === kidEvent.person_id);
+
+  let a = assignments.find(x => x.event_id === current.event_id);
+  if (!a) {
+    a = { id: 'asg-' + current.event_id, event_id: current.event_id, person_id: personId, kind: 'pickup', status: 'assigned' };
+    assignments.push(a);
+  } else {
+    a.person_id = personId;
+    a.status = 'assigned';
+  }
+
+  people.forEach(p => { p.flag = null; });
+  person.flag = 'fixed';
+  kid.flag = 'fixed';
+
+  ask.current = null;
+  ask.resolved = { text: `${person.name} is getting ${kid.name}`, why: `${person.name} answered on Telegram.` };
+  status.trace = `${person.name} answered. Calendar updated.`;
+  status.live = false;
+
+  return { ok: true, person, kid };
+}
+
+module.exports = { evaluateDay, resolveAsk, isFreeAt, freeRank };

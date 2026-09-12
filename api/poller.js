@@ -3,12 +3,14 @@
 // Right now "the calendar" is the in-memory fake in data/seed.js — same
 // shape as a real one, so this is the seam issue #5 swaps later.
 
-const { events } = require('../data/seed');
+const { events, people, ask } = require('../data/seed');
 const { evaluateDay } = require('./conflict');
+const { notifyAsk } = require('./telegram');
 
 const POLL_MS = 10000;
 
 let lastKnownState = {};
+let lastNotifiedAskId = null;
 
 function snapshot() {
   const s = {};
@@ -24,9 +26,25 @@ function changed(before, after) {
   });
 }
 
+function notifyIfNewAsk() {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+
+  const current = ask.current;
+  if (current && current.id !== lastNotifiedAskId) {
+    lastNotifiedAskId = current.id;
+    notifyAsk(token, current, people).catch(err => console.error('telegram notify failed:', err.message));
+  } else if (!current) {
+    lastNotifiedAskId = null; // a future re-occurrence of the same conflict notifies again
+  }
+}
+
 function checkForChanges() {
   const now = snapshot();
-  if (changed(lastKnownState, now)) evaluateDay();
+  if (changed(lastKnownState, now)) {
+    evaluateDay();
+    notifyIfNewAsk();
+  }
   lastKnownState = now;
 }
 

@@ -1,10 +1,12 @@
 // Fake calendar, seeded in memory. No real calendar account — see CLAUDE.md.
 // Four entities only: person, event, assignment, ask.
 
+// telegram_chat_id: all three guardians point at the same test account for
+// now (Shae's) — swap in separate people's chat_ids for the real demo
 const people = [
-  { id: 'dana',  name: 'Dana',  role: 'guardian', telegram_chat_id: null, flag: null },
-  { id: 'sam',   name: 'Sam',   role: 'guardian', telegram_chat_id: null, flag: null },
-  { id: 'alex',  name: 'Alex',  role: 'guardian', telegram_chat_id: null, flag: null }, // babysitter
+  { id: 'dana',  name: 'Dana',  role: 'guardian', telegram_chat_id: 8758977093, flag: null },
+  { id: 'sam',   name: 'Sam',   role: 'guardian', telegram_chat_id: 8758977093, flag: null },
+  { id: 'alex',  name: 'Alex',  role: 'guardian', telegram_chat_id: 8758977093, flag: null }, // babysitter
   { id: 'maya',  name: 'Maya',  role: 'kid',    telegram_chat_id: null, flag: null },
   { id: 'jonah', name: 'Jonah', role: 'kid',    telegram_chat_id: null, flag: null }
 ];
@@ -23,8 +25,10 @@ const assignments = [
   { id: 'asg-maya-pickup', event_id: 'ev-maya-soccer', person_id: 'dana', kind: 'pickup', status: 'assigned' }
 ];
 
-// mutable: { id, event_id, text, reason, asked: [personId], status } or null
-const ask = { current: null };
+// current: { id, event_id, text, reason, asked: [personId], status } or null
+// resolved: { text, why } set right after a tap resolves current — shows the
+// wall's "settled" tone until the next real delta re-evaluates from scratch
+const ask = { current: null, resolved: null };
 
 // mutable: what the wall's trace line says, and whether it's "live"
 const status = { trace: 'Watching the calendar.', live: false };

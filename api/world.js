@@ -20,9 +20,9 @@ function describeEvent(person, e) {
 }
 
 function buildAsk() {
-  const a = ask.current;
-  if (!a) return null;
-  return { tone: 'open', kicker: 'Needs a person', line: a.text, why: a.reason };
+  if (ask.current) return { tone: 'open', kicker: 'Needs a person', line: ask.current.text, why: ask.current.reason };
+  if (ask.resolved) return { tone: 'settled', kicker: 'Handled', line: ask.resolved.text, why: ask.resolved.why };
+  return null;
 }
 
 function buildWorld() {

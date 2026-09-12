@@ -1,12 +1,31 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+
+// load .env into process.env — no dependency, just a few lines
+(function loadEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (key && !(key in process.env)) process.env[key] = value;
+  }
+})();
+
 const { buildWorld } = require('./api/world');
 const { startPolling, checkForChanges } = require('./api/poller');
-const { events } = require('./data/seed');
+const { resolveAsk } = require('./api/conflict');
+const { pollUpdates, clearKeyboards, answerCallback } = require('./api/telegram');
+const { events, people } = require('./data/seed');
 
 const PORT = 3000;
 const DIST_DIR = path.join(__dirname, 'frontend', 'dist');
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -65,6 +84,28 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // debug-only: lets you find a chat_id to put in data/seed.js without ever
+  // exposing the bot token — the token stays server-side, only the parsed
+  // results come back. Message the bot first, then hit this.
+  if (req.method === 'GET' && url.pathname === '/debug/telegram-updates') {
+    if (!TELEGRAM_TOKEN) { res.writeHead(500); res.end('TELEGRAM_BOT_TOKEN not set in .env'); return; }
+    fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getUpdates`)
+      .then(r => r.json())
+      .then(data => {
+        const messages = (data.result || [])
+          .filter(u => u.message)
+          .map(u => ({
+            chat_id: u.message.chat.id,
+            name: u.message.chat.first_name || u.message.chat.username,
+            text: u.message.text
+          }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(messages, null, 2));
+      })
+      .catch(err => { res.writeHead(500); res.end('telegram request failed: ' + err.message); });
+    return;
+  }
+
   if (req.method === 'GET') {
     serveStatic(url.pathname, res);
     return;
@@ -79,3 +120,32 @@ server.listen(PORT, () => {
 });
 
 startPolling();
+
+async function handleCallback(cb) {
+  const person = people.find(p => p.telegram_chat_id === cb.from.id);
+  if (!person) { await answerCallback(TELEGRAM_TOKEN, cb.id, 'Not recognized.'); return; }
+
+  const [action] = cb.data.split(':');
+
+  if (action === 'resolve') {
+    const result = resolveAsk(person.id);
+    if (result.ok) {
+      await clearKeyboards(TELEGRAM_TOKEN, `✅ ${result.person.name} is getting ${result.kid.name}.`);
+      await answerCallback(TELEGRAM_TOKEN, cb.id, 'Got it — thanks!');
+    } else {
+      await answerCallback(TELEGRAM_TOKEN, cb.id, 'Already handled.');
+    }
+    return;
+  }
+
+  if (action === 'decline') {
+    // leaves the ask open — CLAUDE.md: a decline must not silently resolve it
+    await answerCallback(TELEGRAM_TOKEN, cb.id, 'Thanks for letting us know.');
+  }
+}
+
+if (TELEGRAM_TOKEN) {
+  pollUpdates(TELEGRAM_TOKEN, handleCallback);
+} else {
+  console.warn('TELEGRAM_BOT_TOKEN not set in .env — Telegram is disabled, everything else still works');
+}
